@@ -1,6 +1,6 @@
 #!/bin/bash
 
-EXEC="../bruteforce/sacred_geometry/target/debug/sacred_geometry"
+EXEC="../bruteforce/sacred_geometry/target/release/sacred_geometry"
 FAILSTRING="aww"
 TRIALS=100
 

@@ -43,6 +43,14 @@ Die rolls: [6, 2, 4, 6, 4, 6, 1, 6]
 101 = ((((6) * ((4) * (((6) * (6)) / (2)))) / (4)) - (6)) - (1)
 ```
 
+## Analysis
+
+I ran 100 trials for each effective spell level from 1-9 and each number of
+ranks between 1 and 10.  (You start really feeling the exponential increase in
+runtime after 10 ranks.)  Here are the reuslts:
+
+![Wow, it really doesn't take a lot.][analysis/results.png]
+
 ## Contents
 
 1. A brute-force solver for sacred geometry.  The brute force
