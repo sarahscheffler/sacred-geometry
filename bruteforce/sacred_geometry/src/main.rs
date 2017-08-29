@@ -14,37 +14,71 @@
  * a.k.a. "10110".  1*4 is encoded as "4||101" a.k.a. "100101". 
  */
 
+extern crate rand;
+
 use std::vec::Vec;
 use std::collections::{HashMap,  VecDeque};
 use std::fmt;
+use std::env;
 use std::slice::Iter;
+use rand::distributions::{IndependentSample, Range};
+
+const PRIME_CONSTANTS: &'static [[u8; 3]; 9] = &[
+    [3, 5, 7],
+    [11, 13, 17],
+    [19, 23, 29],
+    [31, 37, 41],
+    [43, 47, 53],
+    [59, 61, 67],
+    [71, 73, 79],
+    [83, 89, 97],
+    [101, 103, 107],
+];
+
+const HELP_MSG: &str = "Usage: `./sacred_geometry num_dice spell_level`";
 
 fn main() {
-    // TODO: should be user input
-    //let dierolls = vec![5, 2, 3, 5, 5];
-    //let dierolls = vec![1, 1, 1, 1, 1, 1, 1];
-    //let dierolls = vec![1, 1];
-    let dierolls = vec![6,6,5,6,6,4,2,4,5,4,6,2];
-    //let dierolls = vec![2,4,5,1,4,6,2];
-    // Highest sacred prime is 107
-    //let target: u8 = 7; // (5 / 5) + (2 * 3)
-    //let target: u8 = 107;
-    let target: u8 = 67;
-    let mut solver: Solver = Solver::new(dierolls, target);
-    /*println!("{:b}", solver.expr_to_numbers(0b100001));
-    println!("{:b}", solver.expr_to_numbers(0b110010));
-    println!("{:b}", solver.expr_to_numbers(0b1010100));
-    println!("{:b}", solver.expr_to_numbers(0b1011000));
-    println!("{:b}", solver.expr_to_value(0b100001));
-    println!("{:b}", solver.expr_to_value(0b110010));
-    println!("{:b}", solver.expr_to_value(0b1010100));
-    println!("{:b}", solver.expr_to_value(0b1011000));
-    println!("{:b}", solver.encode_expr(2, 1 << 0));
-    println!("{:b}", solver.encode_expr(3, 1 << 1));
-    println!("{:b}", solver.encode_expr(5, 1 << 2));
-    println!("{:b}", solver.encode_expr(5, 1 << 3));*/
 
-    solver.solve();
+    let args: Vec<String> = env::args().collect();
+
+    if args.len() < 3 {
+        println!("{}", HELP_MSG);
+        return
+    }
+
+    let num_dice: u8 = args[1].parse().unwrap_or(0);
+    if num_dice < 1 || num_dice > 24 {
+        println!("Number of dice must be between 1 and 24");
+        return
+    }
+
+    let spell_level: usize = args[2].parse().unwrap_or(0);
+    if spell_level < 1 || spell_level > 9 {
+        println!("Spell level must be between 1 and 9");
+        return
+    }
+
+    // get random die rolls
+    let range = Range::new(1,7); // lower inclusive, upper exclusive
+    let mut rng = rand::thread_rng();
+    let mut dierolls = Vec::new();
+    for _ in 0..num_dice {
+        dierolls.push(range.ind_sample(&mut rng));
+    }
+
+    println!("Die rolls: {:?}", dierolls);
+
+    let targets = PRIME_CONSTANTS[spell_level - 1]; // indexing
+
+    for target in targets.into_iter() {
+        let mut solver: Solver = Solver::new(dierolls.clone(), *target);
+        solver.solve();
+        if solver.has_solution() {
+            solver.print_solution();
+            return
+        }
+    }
+    println!("No solution was found, aww");
 }
 
 #[derive(Clone)]
@@ -113,7 +147,8 @@ struct Solver {
     dierolls: Vec<u8>,
     target_decoded: u8,
     target_encoded: u32,
-    built_exprs: HashMap<u32, Expression>, // encoded exprs either map to (LHS, Op, RHS) or to a die roll
+    built_exprs: HashMap<u32, Expression>, // encoded exprs either map to 
+                                           // (LHS, Op, RHS) or to a die roll
     queue: VecDeque<u32>, // queue of remaining encoded exprs
 }
 
@@ -206,12 +241,14 @@ impl Solver {
                             None
                         },
                         Operator::Mul => Some(lhs_value as u32 * rhs_value as u32),
-                        Operator::Div => if (rhs_value != 0) && (lhs_value % rhs_value == 0) {
+                        Operator::Div => if (rhs_value != 0) && 
+                            (lhs_value % rhs_value == 0) {
                             Some(lhs_value / rhs_value)
                         } else {
                             None
                         },
-                        Operator::DivReverse => if (lhs_value != 0) && (rhs_value % lhs_value == 0) {
+                        Operator::DivReverse => if (lhs_value != 0) && 
+                            (rhs_value % lhs_value == 0) {
                             Some(rhs_value / lhs_value)
                         } else {
                             None
@@ -237,29 +274,38 @@ impl Solver {
 
         }
 
-        if self.built_exprs.contains_key(&self.target_encoded) {
+    }
 
-            println!("{} = {}", self.target_decoded as u32, self.printer(self.target_encoded));
-            //TODO: return
-        } else {
-            println!("Aww");
-            println!("{:?}", self.built_exprs);
-        }
+    /** True if the target has been reached, false otherwise */
+    fn has_solution(&self) -> bool {
+        self.built_exprs.contains_key(&self.target_encoded)
     }
 
 
-    pub fn print_step(&self, expr: Expression) -> String {
+    /** Recursively print an Expression */
+    pub fn print_expr(&self, expr: Expression) -> String {
         match expr {
-            Expression::ExprParts(lhs, Operator::SubReverse, rhs) => self.print_step(Expression::ExprParts(rhs, Operator::Sub, lhs)),
-            Expression::ExprParts(lhs, Operator::DivReverse, rhs) => self.print_step(Expression::ExprParts(rhs, Operator::Div, lhs)),
-            Expression::ExprParts(lhs, op, rhs) => format!("({}){}({})", self.printer(lhs), op, self.printer(rhs)),
-            Expression::DieRoll(x) => format!("{}", x),
+            Expression::ExprParts(lhs, Operator::SubReverse, rhs) => 
+                self.print_expr(Expression::ExprParts(rhs, Operator::Sub, lhs)),
+            Expression::ExprParts(lhs, Operator::DivReverse, rhs) => 
+                self.print_expr(Expression::ExprParts(rhs, Operator::Div, lhs)),
+            Expression::ExprParts(lhs, op, rhs) => 
+                format!("({}){}({})", self.printer(lhs), op, self.printer(rhs)),
+            Expression::DieRoll(x) => 
+                format!("{}", x),
         }
     }
 
-    fn printer(&self, current: u32) -> String {
+    /** Recursively print the way to get to the given encoded value */
+    fn printer(&self, encoded_value: u32) -> String {
         // assumes we have the target
-        self.print_step(self.built_exprs.get(&current).unwrap_or(&Expression::DieRoll(0)).clone())
+        self.print_expr(self.built_exprs.get(&encoded_value).unwrap_or(
+                &Expression::DieRoll(0)).clone())
+    }
+
+    fn print_solution(&self) {
+            println!("{} = {}", self.target_decoded as u32, 
+                     self.printer(self.target_encoded));
     }
 }
 
