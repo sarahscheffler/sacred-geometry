@@ -19,10 +19,11 @@ So here's the program to do it for you.
 
 ## Download
 
-If you just want to do sacred geometry calculations, download the latest
-release from github.
+[Download the latest
+release.](https://github.com/sarahscheffler/sacred-geometry/releases/latest)
 
-If you want to build the arithmetic equations, download from source.  This code
+If you want to build the arithmetic equations in addition to just doing sacred
+geometry calculations, download from source.  This code
 is written in Rust (partially as an exercise in learning Rust, so please pardon
 my syntax).
 
