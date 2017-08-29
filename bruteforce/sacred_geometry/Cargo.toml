@@ -1,0 +1,7 @@
+[package]
+name = "sacred_geometry"
+version = "0.1.0"
+authors = ["Sarah Scheffler <selfandmirrors@gmail.com>"]
+
+[dependencies]
+rand = "0.3"
