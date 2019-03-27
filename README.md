@@ -68,7 +68,7 @@ runtime after 10 ranks.)  Here are the reuslts:
 
 3. Eventually, this will contain an analysis of the arithmetic problem itself.
    This problem feels like it might be NP-complete, but I haven't managed a
-   reduction yet.  But it feels like it should reduce to subset sum or 3SAT.
+   reduction yet.  But it feels like it should reduce from subset sum or 3SAT.
 
 As always, comments and criticism are always welcome.  I especially welcome any
 comments on my Rust, which is a new language for me.
